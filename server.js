@@ -3,8 +3,7 @@ import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
 import { readFile, writeFile } from "fs/promises";
-import { v4 as uuid } from "uuid";
-import { connectDatabase } from "./utils/database";
+import { connectDatabase, getTodoCollection } from "./utils/database.js";
 
 if (!process.env.MONGODB_URI) {
 	throw new Error("No MONGODB_URI available in dotenv");
@@ -34,19 +33,19 @@ app.get("/api/todos", async (request, response, next) => {
 
 app.post("/api/todos", async (request, response, next) => {
 	try {
-		const data = await readFile(DATABASE_URI, "utf8");
-		const json = JSON.parse(data);
+		// const data = await readFile(DATABASE_URI, "utf8");
+		// const json = JSON.parse(data);
+
+		const collection = getTodoCollection();
 
 		const todo = {
 			...request.body,
 			isChecked: false,
-			id: uuid(),
 		};
 
-		json.todos.push(todo);
-		await writeFile(DATABASE_URI, JSON.stringify(json, null, 4));
-		response.status(201);
-		response.json(todo);
+		const result = await collection.insertOne(todo);
+
+		response.status(201).send(`Insertion successful, id: ${result.insertedId}`);
 	} catch (error_) {
 		next(error_);
 	}
