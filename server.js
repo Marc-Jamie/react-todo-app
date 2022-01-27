@@ -1,7 +1,15 @@
 import cors from "cors";
 import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
 import { readFile, writeFile } from "fs/promises";
-import { v4 as uuid } from "uuid";
+// import { connectDatabase, getTodoCollection } from "./utils/database.js";
+import mongoose from "mongoose";
+import Todo from "./models/todo.model.js";
+
+if (!process.env.MONGODB_URI) {
+	throw new Error("No MONGODB_URI available in dotenv");
+}
 
 const app = express();
 const port = 1337;
@@ -27,19 +35,20 @@ app.get("/api/todos", async (request, response, next) => {
 
 app.post("/api/todos", async (request, response, next) => {
 	try {
-		const data = await readFile(DATABASE_URI, "utf8");
-		const json = JSON.parse(data);
+		// const data = await readFile(DATABASE_URI, "utf8");
+		// const json = JSON.parse(data);
 
-		const todo = {
+		// const collection = getTodoCollection();
+
+		const todo = new Todo({
 			...request.body,
 			isChecked: false,
-			id: uuid(),
-		};
+		});
+		const mongoDbResponse = await todo.save();
+		console.log(mongoDbResponse);
+		// const result = await collection.insertOne(todo);
 
-		json.todos.push(todo);
-		await writeFile(DATABASE_URI, JSON.stringify(json, null, 4));
-		response.status(201);
-		response.json(todo);
+		response.status(201).json(mongoDbResponse);
 	} catch (error_) {
 		next(error_);
 	}
@@ -93,6 +102,8 @@ app.put("/api/todos", async (request, response, next) => {
 	}
 });
 
-app.listen(port, () => {
-	console.log(`Example app listening on port ${port}`);
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+	app.listen(port, () => {
+		console.log(`Example app listening on port ${port}`);
+	});
 });
